@@ -19,7 +19,39 @@ mongoose
     process.exit(1);
   });
 
+  app.post("/api/rewards/spins", async (req, res) => {
+    const { fid } = req.body;  
+    try {     
+      let reward = await Reward.findOne({ fid });
+      if (!reward) {
+        return res.status(404).json({ message: "User not found" });
+      }     
+      if (reward.spins <= 0) {
+        return res.status(400).json({ message: "No spins left" });
+      }     
+      reward.spins -= 1;
+  
+    // Add a new index after a spin
+const rewardKeys = Array.from(reward.rewards.keys()).map(Number); 
+if (rewardKeys.length > 0) {
+  const maxIndex = Math.max(...rewardKeys); 
+  const newIndex = maxIndex + 1; 
+  const newReward = (reward.rewards.get(maxIndex.toString()) || 0) + 100;
+  reward.rewards.set(newIndex.toString(), newReward); 
+} else {
+ 
+  reward.rewards.set("0", 100); // Set initial reward
+}
 
+      
+      await reward.save();
+  
+      res.json({ message: "Spin used successfully", spins: reward.spins, rewards: reward.rewards });
+    } catch (error) {
+      console.error("Error using spin:", error);
+      res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+  });
 
 
 //const Reward = mongoose.model("Reward", rewardSchema);
